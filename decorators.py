@@ -1,6 +1,8 @@
 from abc import ABC, abstractmethod
+import functools
 import logging
 from math import sqrt
+import time
 from typing import Any, Callable
 
 logger = logging.getLogger("decorator_logger")
@@ -37,27 +39,39 @@ class ConcreteDecorator(AbstractDecorator):
 # ============================================ Decorators using python syntax ============================================
 
 def log_arguments_and_return_value(func: Callable[..., Any]) -> Callable[..., Any]:
+    @functools.wraps(func)
     def wrapper(*args, **kwargs):
-        str_arguments = [str(argument) for argument in args]
-        str_k_arguments = [f"{str(key)}={str(value)}" for key, value in kwargs.items()]
-        args_log = f"The function has following positional arguments: {(", ").join(str_arguments)}." if len(args) > 0 else "The function has no positional arguments."
-        kwargs_log = f"The function has following keyword arguments: {(", ").join(str_k_arguments)}." if len(kwargs) > 0 else "The function has no keyword arguments."
-        logger.warning(args_log)
-        logger.warning(kwargs_log)
+        logger.warning(f"The function {func.__name__} has following positional arguments: {args}.")
+        logger.warning(f"The function {func.__name__} has following keyword arguments: {kwargs}.")
         value = func(*args, **kwargs)
         return value
 
     return wrapper
 
+def measure_execution_time(func: Callable[..., Any]) -> Callable[..., Any]:
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        start_time = time.perf_counter()
+        value = func(*args, **kwargs)
+        end_time = time.perf_counter()
+        time_diff = end_time - start_time
+        logger.warning(f"The function {func.__name__} took {time_diff} seconds.")
+        return value
+
+    return wrapper
+
 @log_arguments_and_return_value
+@measure_execution_time
 def add_numbers(num1: int, num2: int) -> int:
     return num1 + num2
 
 @log_arguments_and_return_value
+@measure_execution_time
 def greet() -> str:
     return "Hello world!"
 
 @log_arguments_and_return_value
+@measure_execution_time
 def say_name(name="name", surname="surname"):
     return f"I am {name} {surname}. Nice to meet you."
 
